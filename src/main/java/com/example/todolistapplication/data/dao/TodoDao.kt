@@ -9,6 +9,9 @@ interface TodoDao {
     @Query("SELECT * FROM todos ORDER BY CASE WHEN dueDate IS NULL THEN 1 ELSE 0 END, dueDate ASC")
     fun getAllTodos(): Flow<List<Todo>>
 
+    @Query("SELECT * FROM todos ORDER BY CASE WHEN dueDate IS NULL THEN 1 ELSE 0 END, dueDate ASC")
+    suspend fun getAllTodosOneShot(): List<Todo>
+
     @Query("SELECT * FROM todos WHERE id = :id")
     suspend fun getTodoById(id: Int): Todo
 

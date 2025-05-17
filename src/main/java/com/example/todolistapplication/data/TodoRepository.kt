@@ -20,13 +20,48 @@ class TodoRepository(private val todoDao: TodoDao) {
         }
         .map { it }
 
+    // This function now removes API tasks and keeps only local tasks
     suspend fun refreshTodos() {
+        // Get current todos
+        val currentTodos = todoDao.getAllTodosOneShot()
+        
+        // Keep only local todos (where description is different from title)
+        val localTodos = currentTodos.filter { it.description != it.title }
+        
+        // Clear everything and restore only local todos
+        todoDao.deleteAllTodos()
+        localTodos.forEach { todo ->
+            todoDao.insertTodo(todo)
+        }
+    }
+
+    // Clear API tasks only when explicitly requested
+    suspend fun clearApiTasks() {
+        val currentTodos = todoDao.getAllTodosOneShot()
+        val apiTodos = currentTodos.filter { it.description == it.title }
+        apiTodos.forEach { todo ->
+            todoDao.deleteTodo(todo)
+        }
+    }
+
+    // Separate function for fetching from API
+    suspend fun fetchFromApi() {
         try {
+            // Get current local todos first
+            val localTodos = todoDao.getAllTodosOneShot().filter { it.description != it.title }
+            
             val response = api.getTodos()
             if (response.isSuccessful) {
-                val remoteTodos = response.body()?.map { it.toTodo() } ?: emptyList()
-                // Clear existing todos before inserting new ones
+                // Clear database
                 todoDao.deleteAllTodos()
+                
+                // Restore local todos first
+                localTodos.forEach { todo ->
+                    todoDao.insertTodo(todo)
+                }
+                
+                // Then add API todos
+                val remoteTodos = response.body()?.map { it.toTodo() } ?: emptyList()
                 remoteTodos.forEach { todo ->
                     todoDao.insertTodo(todo)
                 }
@@ -34,20 +69,6 @@ class TodoRepository(private val todoDao: TodoDao) {
                 throw IOException("Failed to fetch todos: ${response.code()} - ${response.message()}")
             }
         } catch (e: Exception) {
-            // If network call fails and we have no cached data, add sample data
-            if (todoDao.getTodoCount() == 0) {
-                val initialTodos = listOf(
-                    Todo(
-                        title = "Welcome to Todo App",
-                        description = "This is your first todo item. You're offline now.",
-                        isCompleted = false
-                    )
-                )
-                initialTodos.forEach { todo ->
-                    todoDao.insertTodo(todo)
-                }
-            }
-            // Rethrow the exception to be handled by the ViewModel
             throw when (e) {
                 is IOException -> IOException("Network error: ${e.message}")
                 else -> Exception("Failed to refresh todos: ${e.message}")
@@ -57,11 +78,11 @@ class TodoRepository(private val todoDao: TodoDao) {
 
     private fun TodoResponse.toTodo(): Todo {
         return Todo(
-            id = this.id,  // Preserve the API ID
+            id = 0, // Let Room generate new ID to avoid conflicts
             title = this.title,
-            description = "Task ${this.id} from JSONPlaceholder API", // Create a meaningful description
+            description = this.title, // This helps us identify API todos
             isCompleted = this.completed,
-            dueDate = null // API doesn't provide due date
+            dueDate = null
         )
     }
 
@@ -86,5 +107,9 @@ class TodoRepository(private val todoDao: TodoDao) {
 
     suspend fun deleteTodoById(id: Int) {
         todoDao.deleteTodoById(id)
+    }
+
+    suspend fun deleteAllTodos() {
+        todoDao.deleteAllTodos()
     }
 } 

@@ -29,12 +29,6 @@ class TodoListViewModel(
 
     fun loadTodos() {
         viewModelScope.launch {
-            try {
-                repository.refreshTodos()
-            } catch (e: Exception) {
-                // If refresh fails, we'll still show cached data
-            }
-
             repository.todos
                 .catch { e ->
                     _uiState.value = TodoListUiState.Error(e.message ?: "Unknown error")
@@ -42,6 +36,28 @@ class TodoListViewModel(
                 .collect { todos ->
                     _uiState.value = TodoListUiState.Success(todos)
                 }
+        }
+    }
+
+    // New function to manually fetch from API
+    fun fetchFromApi() {
+        viewModelScope.launch {
+            try {
+                _uiState.value = TodoListUiState.Loading
+                repository.fetchFromApi()
+            } catch (e: Exception) {
+                _uiState.value = TodoListUiState.Error(e.message ?: "Failed to fetch from API")
+            }
+        }
+    }
+
+    fun clearAllTodos() {
+        viewModelScope.launch {
+            try {
+                repository.deleteAllTodos()
+            } catch (e: Exception) {
+                _uiState.value = TodoListUiState.Error("Failed to clear todos: ${e.message}")
+            }
         }
     }
 

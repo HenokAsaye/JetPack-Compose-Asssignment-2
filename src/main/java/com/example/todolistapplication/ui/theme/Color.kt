@@ -2,6 +2,13 @@ package com.example.todolistapplication.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+val DarkBlue = Color(0xFF0A2472)
+val DeepBlue = Color(0xFF001233)
+val LightBlue = Color(0xFF2196F3)
+val Red = Color(0xFFE91E63)
+val White = Color(0xFFFFFFFF)
+val Gray = Color(0xFF757575)
+
 val md_theme_light_primary = Color(0xFF006C4C)
 val md_theme_light_onPrimary = Color(0xFFFFFFFF)
 val md_theme_light_primaryContainer = Color(0xFF89F8C7)
