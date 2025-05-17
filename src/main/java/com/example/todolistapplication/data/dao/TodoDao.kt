@@ -12,7 +12,7 @@ interface TodoDao {
     @Query("SELECT * FROM todos WHERE id = :id")
     suspend fun getTodoById(id: Int): Todo
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTodo(todo: Todo): Long
 
     @Update
@@ -23,6 +23,9 @@ interface TodoDao {
 
     @Query("DELETE FROM todos WHERE id = :id")
     suspend fun deleteTodoById(id: Int)
+
+    @Query("DELETE FROM todos")
+    suspend fun deleteAllTodos()
 
     @Query("SELECT COUNT(*) FROM todos")
     suspend fun getTodoCount(): Int
