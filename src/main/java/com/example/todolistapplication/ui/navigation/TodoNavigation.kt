@@ -3,58 +3,52 @@ package com.example.todolistapplication.ui.navigation
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.todolistapplication.di.AppContainer
 import com.example.todolistapplication.ui.screens.detail.TodoDetailScreen
-import com.example.todolistapplication.ui.screens.detail.TodoDetailViewModel
 import com.example.todolistapplication.ui.screens.list.TodoListScreen
-import com.example.todolistapplication.ui.screens.list.TodoListViewModel
 
-private object Routes {
-    const val TODO_LIST = "todoList"
-    const val TODO_DETAIL = "todoDetail/{todoId}"
-    
-    fun todoDetail(todoId: Int) = "todoDetail/$todoId"
+sealed class Screen(val route: String) {
+    object TodoList : Screen("todoList")
+    object TodoDetail : Screen("todoDetail/{todoId}") {
+        fun createRoute(todoId: Int) = "todoDetail/$todoId"
+    }
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun TodoNavigation(
-    todoListViewModel: TodoListViewModel,
-    todoDetailViewModel: TodoDetailViewModel
+    navController: NavHostController,
+    appContainer: AppContainer
 ) {
-    val navController = rememberNavController()
-
     NavHost(
         navController = navController,
-        startDestination = Routes.TODO_LIST
+        startDestination = Screen.TodoList.route
     ) {
-        composable(Routes.TODO_LIST) {
+        composable(Screen.TodoList.route) {
             TodoListScreen(
-                viewModel = todoListViewModel,
+                viewModel = appContainer.todoListViewModel,
                 onTodoClick = { todoId ->
-                    navController.navigate(Routes.todoDetail(todoId))
+                    navController.navigate(Screen.TodoDetail.createRoute(todoId))
                 }
             )
         }
+
         composable(
-            route = Routes.TODO_DETAIL,
+            route = Screen.TodoDetail.route,
             arguments = listOf(
-                navArgument("todoId") {
-                    type = NavType.IntType
-                }
+                navArgument("todoId") { type = NavType.IntType }
             )
         ) { backStackEntry ->
             val todoId = backStackEntry.arguments?.getInt("todoId") ?: return@composable
             TodoDetailScreen(
+                viewModel = appContainer.createTodoDetailViewModel(),
                 todoId = todoId,
-                viewModel = todoDetailViewModel,
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

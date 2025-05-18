@@ -9,6 +9,7 @@ import java.time.format.DateTimeFormatter
 data class Todo(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
+    val apiId: Int? = null, // ID from the API, null for local-only todos
     val userId: Int = 1, // Default userId set to 1
     val title: String,
     val description: String,

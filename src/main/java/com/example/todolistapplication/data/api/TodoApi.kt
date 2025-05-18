@@ -1,7 +1,7 @@
 package com.example.todolistapplication.data.api
 
 import retrofit2.http.GET
-import retrofit2.Response
+import retrofit2.http.Path
 
 /**
  * Data class representing a Todo item from the JSONPlaceholder API
@@ -22,5 +22,15 @@ interface TodoApi {
      * @return Response containing a list of TodoResponse objects
      */
     @GET("todos")
-    suspend fun getTodos(): Response<List<TodoResponse>>
-} 
+    suspend fun getTodos(): List<TodoApiModel>
+
+    @GET("todos/{id}")
+    suspend fun getTodoById(@Path("id") id: Int): TodoApiModel
+}
+
+data class TodoApiModel(
+    val userId: Int,
+    val id: Int,
+    val title: String,
+    val completed: Boolean
+) 

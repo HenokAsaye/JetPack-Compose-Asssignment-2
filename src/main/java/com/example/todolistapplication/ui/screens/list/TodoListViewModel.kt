@@ -11,7 +11,11 @@ import java.time.LocalDate
 
 sealed class TodoListUiState {
     data object Loading : TodoListUiState()
-    data class Success(val todos: List<Todo>) : TodoListUiState()
+    data class Success(
+        val todos: List<Todo>,
+        val isRefreshing: Boolean = false,
+        val errorMessage: String? = null
+    ) : TodoListUiState()
     data class Error(val message: String) : TodoListUiState()
 }
 
@@ -25,6 +29,40 @@ class TodoListViewModel(
 
     init {
         loadTodos()
+        // Try to fetch initial data from API
+        refreshFromApi()
+    }
+
+    private fun refreshFromApi() {
+        viewModelScope.launch {
+            try {
+                // If we have success state, set isRefreshing to true
+                if (_uiState.value is TodoListUiState.Success) {
+                    _uiState.value = (_uiState.value as TodoListUiState.Success).copy(isRefreshing = true)
+                }
+                
+                repository.refreshTodos()
+                
+                // Clear any error message if refresh succeeds
+                if (_uiState.value is TodoListUiState.Success) {
+                    _uiState.value = (_uiState.value as TodoListUiState.Success).copy(
+                        isRefreshing = false,
+                        errorMessage = null
+                    )
+                }
+            } catch (e: Exception) {
+                // If we have cached data, show error message but keep showing data
+                if (_uiState.value is TodoListUiState.Success) {
+                    _uiState.value = (_uiState.value as TodoListUiState.Success).copy(
+                        isRefreshing = false,
+                        errorMessage = e.message
+                    )
+                } else {
+                    // If we have no data at all, show error state
+                    _uiState.value = TodoListUiState.Error(e.message ?: "Unknown error")
+                }
+            }
+        }
     }
 
     fun loadTodos() {
@@ -34,19 +72,43 @@ class TodoListViewModel(
                     _uiState.value = TodoListUiState.Error(e.message ?: "Unknown error")
                 }
                 .collect { todos ->
-                    _uiState.value = TodoListUiState.Success(todos)
+                    // Preserve isRefreshing and errorMessage when updating todos
+                    val currentState = _uiState.value
+                    _uiState.value = TodoListUiState.Success(
+                        todos = todos,
+                        isRefreshing = (currentState as? TodoListUiState.Success)?.isRefreshing ?: false,
+                        errorMessage = (currentState as? TodoListUiState.Success)?.errorMessage
+                    )
                 }
         }
     }
 
-    // New function to manually fetch from API
     fun fetchFromApi() {
         viewModelScope.launch {
             try {
-                _uiState.value = TodoListUiState.Loading
+                if (_uiState.value is TodoListUiState.Success) {
+                    _uiState.value = (_uiState.value as TodoListUiState.Success).copy(isRefreshing = true)
+                } else {
+                    _uiState.value = TodoListUiState.Loading
+                }
+                
                 repository.fetchFromApi()
+                
+                if (_uiState.value is TodoListUiState.Success) {
+                    _uiState.value = (_uiState.value as TodoListUiState.Success).copy(
+                        isRefreshing = false,
+                        errorMessage = null
+                    )
+                }
             } catch (e: Exception) {
-                _uiState.value = TodoListUiState.Error(e.message ?: "Failed to fetch from API")
+                if (_uiState.value is TodoListUiState.Success) {
+                    _uiState.value = (_uiState.value as TodoListUiState.Success).copy(
+                        isRefreshing = false,
+                        errorMessage = e.message
+                    )
+                } else {
+                    _uiState.value = TodoListUiState.Error(e.message ?: "Failed to fetch from API")
+                }
             }
         }
     }
@@ -56,7 +118,13 @@ class TodoListViewModel(
             try {
                 repository.deleteAllTodos()
             } catch (e: Exception) {
-                _uiState.value = TodoListUiState.Error("Failed to clear todos: ${e.message}")
+                if (_uiState.value is TodoListUiState.Success) {
+                    _uiState.value = (_uiState.value as TodoListUiState.Success).copy(
+                        errorMessage = "Failed to clear todos: ${e.message}"
+                    )
+                } else {
+                    _uiState.value = TodoListUiState.Error("Failed to clear todos: ${e.message}")
+                }
             }
         }
     }
@@ -67,7 +135,13 @@ class TodoListViewModel(
                 repository.insertTodo(title, description, dueDate)
                 hideAddDialog()
             } catch (e: Exception) {
-                _uiState.value = TodoListUiState.Error("Failed to add todo: ${e.message}")
+                if (_uiState.value is TodoListUiState.Success) {
+                    _uiState.value = (_uiState.value as TodoListUiState.Success).copy(
+                        errorMessage = "Failed to add todo: ${e.message}"
+                    )
+                } else {
+                    _uiState.value = TodoListUiState.Error("Failed to add todo: ${e.message}")
+                }
             }
         }
     }
@@ -77,7 +151,13 @@ class TodoListViewModel(
             try {
                 repository.updateTodo(todo.copy(isCompleted = !todo.isCompleted))
             } catch (e: Exception) {
-                _uiState.value = TodoListUiState.Error("Failed to update todo: ${e.message}")
+                if (_uiState.value is TodoListUiState.Success) {
+                    _uiState.value = (_uiState.value as TodoListUiState.Success).copy(
+                        errorMessage = "Failed to update todo: ${e.message}"
+                    )
+                } else {
+                    _uiState.value = TodoListUiState.Error("Failed to update todo: ${e.message}")
+                }
             }
         }
     }
@@ -87,7 +167,13 @@ class TodoListViewModel(
             try {
                 repository.deleteTodo(todo)
             } catch (e: Exception) {
-                _uiState.value = TodoListUiState.Error("Failed to delete todo: ${e.message}")
+                if (_uiState.value is TodoListUiState.Success) {
+                    _uiState.value = (_uiState.value as TodoListUiState.Success).copy(
+                        errorMessage = "Failed to delete todo: ${e.message}"
+                    )
+                } else {
+                    _uiState.value = TodoListUiState.Error("Failed to delete todo: ${e.message}")
+                }
             }
         }
     }
@@ -101,7 +187,12 @@ class TodoListViewModel(
     }
 
     fun retry() {
-        _uiState.value = TodoListUiState.Loading
-        loadTodos()
+        refreshFromApi()
+    }
+
+    fun dismissError() {
+        if (_uiState.value is TodoListUiState.Success) {
+            _uiState.value = (_uiState.value as TodoListUiState.Success).copy(errorMessage = null)
+        }
     }
 } 

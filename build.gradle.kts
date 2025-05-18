@@ -73,7 +73,6 @@ dependencies {
     // Material Design and AppCompat
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
-
     // Room dependencies
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")

@@ -8,10 +8,12 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.todolistapplication.data.model.Todo
 import com.maxkeppeker.sheets.core.models.base.rememberUseCaseState
-
 import com.maxkeppeler.sheets.calendar.CalendarDialog
 import com.maxkeppeler.sheets.calendar.models.CalendarConfig
 import com.maxkeppeler.sheets.calendar.models.CalendarSelection
@@ -35,31 +37,49 @@ fun EditTodoDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit Todo") },
+        containerColor = Color(0xFF4C1D95),
+        title = { Text("Edit Task", color = Color.White, fontWeight = FontWeight.Bold) },
         text = {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Title") },
-                    modifier = Modifier.fillMaxWidth()
+                    label = { Text("Title", color = Color.White.copy(alpha = 0.7f)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF8B5CF6),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
                 )
-                Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("Description") },
+                    label = { Text("Description", color = Color.White.copy(alpha = 0.7f)) },
                     modifier = Modifier.fillMaxWidth(),
-                    minLines = 3
+                    minLines = 3,
+                    maxLines = 5,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF8B5CF6),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
                 )
-                Spacer(modifier = Modifier.height(16.dp))
                 OutlinedButton(
                     onClick = { scope.launch { calendarState.show() } },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color.White
+                    ),
+                    border = ButtonDefaults.outlinedButtonBorder.copy(
+                        brush = SolidColor(Color.White.copy(alpha = 0.3f))
+                    )
                 ) {
                     Icon(Icons.Default.DateRange, contentDescription = "Calendar")
                     Spacer(modifier = Modifier.width(8.dp))
@@ -72,19 +92,20 @@ fun EditTodoDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = {
+                onClick = { 
                     if (title.isNotBlank()) {
                         onConfirm(title, description, dueDate)
                         onDismiss()
                     }
-                }
+                },
+                enabled = title.isNotBlank()
             ) {
-                Text("Save")
+                Text("Save", color = Color.White)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text("Cancel", color = Color.White.copy(alpha = 0.7f))
             }
         }
     )
